@@ -9,6 +9,31 @@ class MarkdownItem:
         self.content_raw = content
         self.tables = []
 
+    def _parse(self):
+        pass
+
+    @property
+    def sections(self):
+        """
+        Splits the raw content into a list of strings (paragraphs).
+        Delimited by two or more newlines.
+        """
+        if not self.content_raw.strip():
+            return []
+
+        # r'\n{2,}' matches 2 or more consecutive newline characters
+        # .strip() removes leading/trailing whitespace from the whole block
+        parts = re.split(r'\n{2,}', self.content_raw.strip())
+
+        # Clean up each individual paragraph and filter out empty strings
+        return [p.strip() for p in parts if p.strip()]
+
+    def __repr__(self):
+        return f"MarkdownItem('{self.title}', Level {self.level}, {len(self.sections)} sections)"
+
+    def dump(self):
+        return self.__dict__
+
     def add_table_from_str(self, text):
         text = """
         | Some Title | Some Description             | Some Number |
@@ -34,33 +59,42 @@ class MarkdownItem:
 
 
 class MarkdownDocument:
-    HEADER_REGEX = r"^(#{2,6})[ \t]+(.+)$"
-
     def __init__(self, path):
         self.path = path
+        self.title = ""
+        self.items = []
 
         with open(self.path, 'r') as f:
-            self.first_line = f.readline()
-            self.raw_markdown = f.readlines()
+            self.text = f.read()
 
-        self.title = ""
-        match = re.match(r"^(#{1})[ \t]+(.+)$", self.first_line)
-        if match:
-           self.title = match.group(2).strip()
+        self.parse(self.text)
+        for item in self.items:
+            if item.level == 1:
+                self.title = item.title
 
-        self.level = 1
+    def parse(self, text):
+        # Regex Breakdown:
+        # ^(#+)          -> Group 1: Capture one or more # at the start of a line (Level)
+        # \s+(.*)        -> Group 2: Capture the title text after the space
+        # \n([\s\S]*?)   -> Group 3: Capture all characters (including newlines) non-greedily
+        # (?=^#|\Z)      -> Lookahead: Stop when you see a new heading or end of string
+        pattern = r"^(#+)\s+(.*)\n([\s\S]*?)(?=^#|\Z)"
 
-        self.next_headers = []
-        for index, line in enumerate(self.raw_markdown):
-            if re.match(self.HEADER_REGEX, line):
-                match = re.match(self.HEADER_REGEX, line)
-                level = match.group(1).count("#")
-                if level == self.level + 1:
-                    title = match.group(2).strip()
-                    self.next_headers.append((title, level,))
+        # re.MULTILINE allows ^ to match the start of every line
+        matches = re.finditer(pattern, text, re.MULTILINE)
 
-        self.items = []
-        for item in self.next_headers:
-            self.items.append(MarkdownItem(*item))
+        for m in matches:
+            level_hashes, title, content = m.groups()
 
-mdd = MarkdownDocument("./md_document.md")
+            # Data preparation for your class:
+            level = len(level_hashes)
+            item_data = [title.strip(), level, content.strip()]
+
+            # Using the unpacking operator as you requested!
+            self.items.append(MarkdownItem(*item_data))
+
+
+mdd = MarkdownDocument("./data/md_document.md")
+print(mdd.title)
+for item in mdd.items:
+    print(item)
