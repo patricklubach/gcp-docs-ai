@@ -1,9 +1,12 @@
 import os
-import requests
-from bs4 import BeautifulSoup
-from markdownify import markdownify as md
+import sys
 from typing import List
 from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
+import requests
+
 
 def get_soup(url: str) -> BeautifulSoup:
     """
@@ -39,7 +42,7 @@ def extract_mobile_nav_links(url: str) -> List[str]:
 
     return list(dict.fromkeys(links))
 
-def convert_article_to_md(url: str, output_folder: str = "storage") -> None:
+def convert_article_to_md(url: str, output_folder: str = "data") -> None:
     """
     Extracts 'devsite-article-body' and saves it as a .md file.
     """
@@ -59,7 +62,10 @@ def convert_article_to_md(url: str, output_folder: str = "storage") -> None:
     filepath = os.path.join(output_folder, filename)
 
     # Convert to Markdown
-    markdown_content = md(str(content_div), heading_style="ATX").strip()
+    # markdown_content = md(str(content_div), heading_style="ATX", wrap_with=None, wrap=False).strip()
+
+    from html_to_markdown import convert
+    markdown_content = convert(str(content_div))
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(markdown_content)
@@ -83,6 +89,7 @@ def batch_process_docs(start_url: str) -> None:
         except Exception as e:
             print(f"Failed to process {link}: {e}")
 
-# Example execution:
-# batch_process_docs("https://docs.cloud.google.com/organization-policy/overview")
-batch_process_docs("https://docs.cloud.google.com/storage/docs/resources")
+
+if __name__ == "__main__":
+    url = sys.argv[1] # e.g. https://docs.cloud.google.com/storage/docs/resources
+    batch_process_docs(url)
