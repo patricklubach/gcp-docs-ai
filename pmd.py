@@ -92,9 +92,3 @@ class MarkdownDocument:
 
             # Using the unpacking operator as you requested!
             self.items.append(MarkdownItem(*item_data))
-
-
-mdd = MarkdownDocument("./data/md_document.md")
-print(mdd.title)
-for item in mdd.items:
-    print(item)
