@@ -21,6 +21,4 @@ uv run scraper.py https://docs.cloud.google.com/storage/docs/introduction
 ## Todo
 
 - Add page title as md title
-- store md file as url name to make it unique
 - update metadata to include title and filename
-- Add multithreading for scraping
