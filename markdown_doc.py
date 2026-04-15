@@ -1,9 +1,11 @@
+"""Parsed Markdown (pmd)"""
+
 import re
 import pandas as pd
 
 
 class MarkdownItem:
-    def __init__(self, title, level, content: str = ""):
+    def __init__(self, title: str, level: int, content: str = ""):
         self.title = title
         self.level = level
         self.content_raw = content

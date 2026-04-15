@@ -4,7 +4,7 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from pmd import MarkdownDocument
+from markdown_doc import MarkdownDocument
 
 md_path = "./data/buckets.md"
 md_documment = MarkdownDocument(md_path)
@@ -17,8 +17,6 @@ document_id = 1
 
 documents = []
 ids = []
-
-
 
 if add_documents:
     for item in md_documment.items:

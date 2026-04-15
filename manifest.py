@@ -2,6 +2,7 @@ import os
 import hashlib
 import json
 
+
 def get_file_hash(filepath: str) -> str:
     """
     Generates an MD5 hash of a file's content.

@@ -1,27 +1,64 @@
 import os
 import sys
-from typing import List
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
+import asyncio
+from typing import List, Optional
 
+import aiohttp
 from bs4 import BeautifulSoup
-from markdownify import markdownify as md
+from html_to_markdown import convert as md_convert
 import requests
 
+from documentation import DocumentationPage
+from logger import logger
 
-def get_soup(url: str) -> BeautifulSoup:
+
+def fetch_one(url):
     """
-    Fetches a URL and returns a BeautifulSoup object.
+    Fetches a single URL and returns its text.
     """
     response = requests.get(url)
     response.raise_for_status()
-    return BeautifulSoup(response.text, 'html.parser')
+    return response.text
 
-def extract_mobile_nav_links(url: str) -> List[str]:
+
+async def fetch(session, url):
+    try:
+      logger.info("Fetch: %s", url)
+      async with session.get(url) as response:
+          if response.status != 200:
+              response.raise_for_status()
+          html = await response.text()
+      return DocumentationPage(url, html)
+    except Exception as err:
+      logger.exception(err)
+
+
+async def fetch_all(session, urls):
+    tasks = []
+
+    for url in urls:
+        task = asyncio.create_task(fetch(session, url))
+        tasks.append(task)
+    return await asyncio.gather(*tasks)
+
+
+async def run(urls: List[str]):
+    """
+    Processes a list of URLs concurrently using a semaphore to limit workers.
+    """
+    async with aiohttp.ClientSession() as session:
+        pages = await fetch_all(session, urls)
+
+    for page in pages:
+        page.write()
+
+
+def extract_mobile_nav_links(html) -> List[str]:
     """
     Precisely targets the <ul> with menu='_book' within the mobile nav container.
     """
-    soup = get_soup(url)
-
+    soup = BeautifulSoup(html, 'html.parser')
     # Target the specific UL using the attribute selector [menu="_book"]
     # We find the parent div first to ensure we are in the mobile nav area
     nav_container = soup.find('div', class_='devsite-mobile-nav-bottom')
@@ -37,57 +74,62 @@ def extract_mobile_nav_links(url: str) -> List[str]:
     links = []
     # Extract all <a> tags within this specific list
     for a in target_ul.find_all('a', href=True):
+      if a['href']:
         href = a['href']
-        links.append(urljoin(url, href))
+      else:
+        href = None
+      links.append(urljoin(url, href))
 
     return list(dict.fromkeys(links))
 
-def convert_article_to_md(url: str, output_folder: str = "data") -> None:
+
+def convert_article_to_md(html: str, output_folder: str = "data") -> None:
     """
     Extracts 'devsite-article-body' and saves it as a .md file.
     """
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    soup = get_soup(url)
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # content_title = soup.find('h1', class_='devsite-article-body')
+    # if content_title:
+    #   title = content_title.text.strip()
+    # else:
+    #   title = None
     content_div = soup.find('div', class_='devsite-article-body')
 
     if not content_div:
-        print(f"No content found for {url}")
+        logger.error(f"No content found for {url}")
         return
 
     # Clean filename: removes query params and trailing slashes
-    slug = url.split('?')[0].rstrip('/').split('/')[-1]
+    urlpath = urlsplit(url).path
+    path_parts = urlpath.split('/')
+    slug = "-".join(path_parts[1:])
     filename = f"{slug}.md"
     filepath = os.path.join(output_folder, filename)
 
     # Convert to Markdown
-    # markdown_content = md(str(content_div), heading_style="ATX", wrap_with=None, wrap=False).strip()
+    # markdown_content = md_convert(str(content_div))
+    # return md_convert(str(content_div))
 
-    from html_to_markdown import convert
-    markdown_content = convert(str(content_div))
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(markdown_content)
-    print(f"Saved: {filepath}")
 
 def batch_process_docs(start_url: str) -> None:
     """
     Orchestrates the link extraction and subsequent markdown conversion.
     """
-    print(f"Fetching links from {start_url}...")
-    links = extract_mobile_nav_links(start_url)
+    logger.info(f"Fetching links from: %s...", start_url)
+    start_page = fetch_one(start_url)
+    links = extract_mobile_nav_links(start_page)
 
     if not links:
-        print("No links found in the '_book' menu.")
+        logger.error("No links found in the navigation menu.")
         return
 
-    print(f"Found {len(links)} links. Starting conversion...")
-    for link in links:
-        try:
-            convert_article_to_md(link)
-        except Exception as e:
-            print(f"Failed to process {link}: {e}")
+    logger.info(f"Found %d links", len(links))
+    asyncio.run(run(links))
 
 
 if __name__ == "__main__":

@@ -45,7 +45,7 @@ def run_smart_local_rag() -> None:
         #     print("Changes detected. Saving updates...")
         #     index.storage_context.persist(persist_dir=PERSIST_DIR)
 
-    chat_engine = index.as_chat_engine(chat_mode="context")
+    chat_engine = index.as_chat_engine()
 
     while True:
         user_input = input("You: ")
@@ -61,6 +61,7 @@ def run_smart_local_rag() -> None:
         duration = end_time - start_time
 
         print(f"AI (took: {duration:.2f}s): {response}\n")
+
 
 if __name__ == "__main__":
     run_smart_local_rag()

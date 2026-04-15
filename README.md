@@ -9,3 +9,18 @@ References:
 
 - https://docs.ollama.com/integrations/onyx
 - https://developers.llamaindex.ai/python/framework/
+
+## Usage
+
+First you need to scrape the documentation you want to have e.g. Cloud Storage using the `scraper.py` script (in general you want to have the "Guides" or "Reference" pages):
+
+```bash
+uv run scraper.py https://docs.cloud.google.com/storage/docs/introduction
+```
+
+## Todo
+
+- Add page title as md title
+- store md file as url name to make it unique
+- update metadata to include title and filename
+- Add multithreading for scraping
