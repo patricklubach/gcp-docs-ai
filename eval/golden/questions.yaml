@@ -1,0 +1,357 @@
+# Golden question set — seed (T-5.1)
+#
+# 30 hand-written questions across the three answer classes defined in
+# docs/01-ARCHITECTURE.md §1. This is the seed for the ≥150 the acceptance
+# criteria require; the class ratio here is proportional to the AC2 target
+# (40 conceptual / 50 integration / 60 library).
+#
+# !! EVERY expected_url BELOW IS UNVERIFIED. !!
+# They were written from knowledge, not fetched — the authoring environment
+# could not reach docs.cloud.google.com. Run ./verify-urls.sh before trusting
+# any metric computed against this file. An expected_url that 404s silently
+# depresses recall and makes a working retriever look broken.
+#
+# Scoring:
+#   recall@k           — did any expected_url appear in the top k hits?
+#   citation_accuracy  — does each cited page actually support the claim?
+#   must_mention       — substrings/concepts a correct answer has to contain;
+#                        used for groundedness, not for retrieval scoring.
+
+version: 1
+host: docs.cloud.google.com   # the scraper's target host; see docs/00-ANALYSIS.md
+default_author: patricklubach
+default_added: 2026-10-09
+url_verified: false
+
+questions:
+
+  # ───────────────────────── conceptual (8) ─────────────────────────
+  # Prose answers from Guides. Single product. Tests basic retrieval.
+
+  - id: conc-001
+    class: conceptual
+    products: [storage]
+    question: What consistency guarantees does Cloud Storage give me for object reads and writes?
+    expected_urls:
+      - https://docs.cloud.google.com/storage/docs/consistency
+    must_mention: [strongly consistent, read-after-write, eventually consistent, list operations]
+    notes: >
+      A correct answer distinguishes strong consistency for object reads/writes from the
+      weaker guarantees on bucket/object listing. Answers that say only "strongly consistent"
+      are incomplete.
+
+  - id: conc-002
+    class: conceptual
+    products: [run]
+    question: What is the difference between a Cloud Run service and a Cloud Run job?
+    expected_urls:
+      - https://docs.cloud.google.com/run/docs/overview/what-is-cloud-run
+      - https://docs.cloud.google.com/run/docs/create-jobs
+    must_mention: [request-driven, runs to completion, no request, task]
+    notes: Services serve requests and scale on traffic; jobs run to completion and exit.
+
+  - id: conc-003
+    class: conceptual
+    products: [pubsub]
+    question: What is the difference between at-least-once and exactly-once delivery in Pub/Sub?
+    expected_urls:
+      - https://docs.cloud.google.com/pubsub/docs/exactly-once-delivery
+      - https://docs.cloud.google.com/pubsub/docs/subscription-overview
+    must_mention: [duplicate, acknowledgement deadline, idempotent, pull subscription]
+    notes: >
+      Exactly-once is scoped to pull subscriptions within a region and does not remove the
+      need for idempotent processing. An answer promising global exactly-once is wrong.
+
+  - id: conc-004
+    class: conceptual
+    products: [storage]
+    question: Which Cloud Storage storage class should I use for data I access a few times a year?
+    expected_urls:
+      - https://docs.cloud.google.com/storage/docs/storage-classes
+    must_mention: [Nearline, Coldline, minimum storage duration, retrieval cost]
+    notes: >
+      Tests whether the answer weighs retrieval cost and minimum storage duration rather than
+      just listing the classes. Coldline (90 days) is the intended answer; Nearline is defensible.
+
+  - id: conc-005
+    class: conceptual
+    products: [iam]
+    question: What is the difference between basic, predefined and custom IAM roles?
+    expected_urls:
+      - https://docs.cloud.google.com/iam/docs/roles-overview
+      - https://docs.cloud.google.com/iam/docs/understanding-roles
+    must_mention: [basic, predefined, custom, least privilege, Owner, Editor, Viewer]
+    notes: Should warn against basic roles in production.
+
+  - id: conc-006
+    class: conceptual
+    products: [iam]
+    question: When should I use Workload Identity Federation instead of a service account key?
+    expected_urls:
+      - https://docs.cloud.google.com/iam/docs/workload-identity-federation
+      - https://docs.cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys
+    must_mention: [external identity provider, short-lived credentials, no long-lived key, OIDC]
+    notes: >
+      High-value question — the correct answer is "almost always, keys are a last resort".
+      Tests whether retrieval surfaces the best-practices page and not only the how-to.
+
+  - id: conc-007
+    class: conceptual
+    products: [bigquery]
+    question: What is the difference between BigQuery on-demand pricing and slot-based capacity pricing?
+    expected_urls:
+      - https://docs.cloud.google.com/bigquery/docs/slots
+      - https://docs.cloud.google.com/bigquery/pricing
+    must_mention: [bytes processed, reservation, editions, baseline, autoscaling]
+
+  - id: conc-008
+    class: conceptual
+    products: [spanner, sql]
+    question: When should I choose Spanner over Cloud SQL?
+    expected_urls:
+      - https://docs.cloud.google.com/spanner/docs/overview
+      - https://docs.cloud.google.com/sql/docs/introduction
+    must_mention: [horizontal scale, strong consistency, multi-region, regional, managed MySQL]
+    notes: >
+      Two products but still conceptual — it is a comparison, not a composition. A good
+      answer mentions cost and that Spanner is overkill for small single-region workloads.
+
+  # ──────────────────────── integration (10) ────────────────────────
+  # Spans two or more products. These are the questions the prototype
+  # cannot answer at all, and the main justification for metadata
+  # filtering + the per-document cap (Architecture §7).
+
+  - id: integ-001
+    class: integration
+    products: [storage, run, eventarc]
+    question: How do I trigger a Cloud Run service when a new object is uploaded to a Cloud Storage bucket?
+    expected_urls:
+      - https://docs.cloud.google.com/eventarc/docs/run/quickstart-storage
+      - https://docs.cloud.google.com/eventarc/docs/run/create-trigger-storage
+    must_mention: [Eventarc, trigger, CloudEvent, service account, google.cloud.storage.object.v1.finalized]
+    notes: >
+      THE canonical integration question. Retrieval must return Eventarc pages, not just
+      Cloud Storage or Cloud Run pages. If the per-document cap is missing, five chunks of
+      the Cloud Run overview will crowd out Eventarc entirely.
+
+  - id: integ-002
+    class: integration
+    products: [pubsub, bigquery]
+    question: How do I stream Pub/Sub messages into BigQuery without running my own pipeline?
+    expected_urls:
+      - https://docs.cloud.google.com/pubsub/docs/bigquery
+    must_mention: [BigQuery subscription, schema, dead-letter, write metadata]
+    notes: >
+      Tests whether the answer finds the direct BigQuery subscription rather than defaulting
+      to Dataflow. A Dataflow-only answer is retrieval failure, not just a style difference.
+
+  - id: integ-003
+    class: integration
+    products: [scheduler, run]
+    question: How do I run a Cloud Run job on a schedule every night?
+    expected_urls:
+      - https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule
+      - https://docs.cloud.google.com/scheduler/docs/creating
+    must_mention: [Cloud Scheduler, cron, OIDC token, service account, run.googleapis.com]
+
+  - id: integ-004
+    class: integration
+    products: [gke, storage, iam]
+    question: How do I give a GKE pod access to a Cloud Storage bucket without mounting a service account key?
+    expected_urls:
+      - https://docs.cloud.google.com/kubernetes-engine/docs/how-to/workload-identity-federation-for-gke
+      - https://docs.cloud.google.com/iam/docs/workload-identity-federation
+    must_mention: [Workload Identity, Kubernetes service account, IAM policy binding, annotate]
+    notes: Three products. Tests whether filter hints can be derived from an implicit question.
+
+  - id: integ-005
+    class: integration
+    products: [build, run]
+    question: How do I set up continuous deployment from a GitHub repo to Cloud Run?
+    expected_urls:
+      - https://docs.cloud.google.com/run/docs/continuous-deployment-with-cloud-build
+      - https://docs.cloud.google.com/build/docs/automating-builds/create-manage-triggers
+    must_mention: [Cloud Build, trigger, cloudbuild.yaml, Artifact Registry, permissions]
+
+  - id: integ-006
+    class: integration
+    products: [dataflow, pubsub, bigquery]
+    question: How do I build a streaming pipeline that reads from Pub/Sub and writes to BigQuery with Dataflow?
+    expected_urls:
+      - https://docs.cloud.google.com/dataflow/docs/tutorials/dataflow-stream-to-bigquery
+      - https://docs.cloud.google.com/dataflow/docs/guides/templates/provided/pubsub-to-bigquery
+    must_mention: [Dataflow template, windowing, Apache Beam, dead-letter table]
+    notes: Deliberately overlaps integ-002 — the two must not collapse to the same answer.
+
+  - id: integ-007
+    class: integration
+    products: [functions, firestore]
+    question: How do I run a Cloud Function whenever a Firestore document is created?
+    expected_urls:
+      - https://docs.cloud.google.com/functions/docs/calling/cloud-firestore
+      - https://docs.cloud.google.com/firestore/docs/extend-with-functions
+    must_mention: [event trigger, document path, wildcard, onDocumentCreated, Eventarc]
+
+  - id: integ-008
+    class: integration
+    products: [secretmanager, run]
+    question: How do I expose a Secret Manager secret to my Cloud Run service as an environment variable?
+    expected_urls:
+      - https://docs.cloud.google.com/run/docs/configuring/services/secrets
+      - https://docs.cloud.google.com/secret-manager/docs/access-control
+    must_mention: [secretmanager.secretAccessor, version, mount as volume, environment variable]
+    notes: Should mention that volume mounts pick up new versions while env vars are read at start.
+
+  - id: integ-009
+    class: integration
+    products: [run, loadbalancing, armor]
+    question: How do I put a global HTTPS load balancer with Cloud Armor in front of Cloud Run?
+    expected_urls:
+      - https://docs.cloud.google.com/load-balancing/docs/https/setting-up-https-serverless
+      - https://docs.cloud.google.com/armor/docs/integrating-cloud-armor
+    must_mention: [serverless NEG, backend service, security policy, ingress settings, internal-and-cloud-load-balancing]
+    notes: >
+      A correct answer mentions restricting Cloud Run ingress so traffic cannot bypass the
+      load balancer. Omitting that is a security-relevant incompleteness worth scoring.
+
+  - id: integ-010
+    class: integration
+    products: [sql, run]
+    question: How do I connect from Cloud Run to a Cloud SQL instance using a private IP?
+    expected_urls:
+      - https://docs.cloud.google.com/sql/docs/postgres/connect-run
+      - https://docs.cloud.google.com/run/docs/configuring/vpc-connectors
+    must_mention: [Direct VPC egress, Serverless VPC Access, cloudsql.client, unix socket, private IP]
+
+  # ────────────────────────── library (12) ──────────────────────────
+  # Needs code. Exercises doc_type=reference|sample and code_lang filters.
+  # These are the questions that fail hardest when chunking splits a
+  # fenced code block (docs/00-ANALYSIS.md §2.5).
+
+  - id: lib-001
+    class: library
+    products: [pubsub]
+    expected_code_lang: go
+    question: Show me the Go code to publish a Pub/Sub message with an ordering key.
+    expected_urls:
+      - https://docs.cloud.google.com/pubsub/docs/publisher
+      - https://docs.cloud.google.com/pubsub/docs/ordering
+    must_mention: [EnableMessageOrdering, OrderingKey, Publisher, result.Get]
+    notes: >
+      Requires BOTH that ordering is enabled on the publisher and that the key is set on the
+      message — a snippet with only one is a wrong answer. Good test of code-chunk integrity.
+
+  - id: lib-002
+    class: library
+    products: [storage]
+    expected_code_lang: python
+    question: How do I upload a large file to Cloud Storage in Python with a resumable upload?
+    expected_urls:
+      - https://docs.cloud.google.com/storage/docs/uploading-objects
+      - https://docs.cloud.google.com/storage/docs/resumable-uploads
+    must_mention: [blob.upload_from_filename, chunk_size, timeout, storage.Client]
+
+  - id: lib-003
+    class: library
+    products: [storage]
+    expected_code_lang: go
+    question: Give me Go code to generate a signed URL for a Cloud Storage object valid for 15 minutes.
+    expected_urls:
+      - https://docs.cloud.google.com/storage/docs/access-control/signing-urls-with-helpers
+      - https://docs.cloud.google.com/storage/docs/access-control/signed-urls
+    must_mention: [SignedURLOptions, Expires, GET, bucket.SignedURL, 15*time.Minute]
+
+  - id: lib-004
+    class: library
+    products: [bigquery]
+    expected_code_lang: python
+    question: How do I run a parameterized BigQuery query in Python to avoid SQL injection?
+    expected_urls:
+      - https://docs.cloud.google.com/bigquery/docs/parameterized-queries
+    must_mention: [ScalarQueryParameter, QueryJobConfig, query_parameters, "@param"]
+
+  - id: lib-005
+    class: library
+    products: [pubsub]
+    expected_code_lang: java
+    question: Show Java code for a Pub/Sub subscriber with flow control limits.
+    expected_urls:
+      - https://docs.cloud.google.com/pubsub/docs/pull
+      - https://docs.cloud.google.com/pubsub/docs/flow-control-messages
+    must_mention: [FlowControlSettings, setMaxOutstandingElementCount, Subscriber, MessageReceiver]
+
+  - id: lib-006
+    class: library
+    products: [firestore]
+    expected_code_lang: go
+    question: How do I run a Firestore transaction in Go that reads a document then conditionally updates it?
+    expected_urls:
+      - https://docs.cloud.google.com/firestore/docs/manage-data/transactions
+    must_mention: [RunTransaction, tx.Get, tx.Set, retry, contention]
+
+  - id: lib-007
+    class: library
+    products: [secretmanager]
+    expected_code_lang: python
+    question: Python code to read the latest version of a secret from Secret Manager?
+    expected_urls:
+      - https://docs.cloud.google.com/secret-manager/docs/access-secret-version
+    must_mention: [SecretManagerServiceClient, access_secret_version, "versions/latest", payload.data]
+
+  - id: lib-008
+    class: library
+    products: [spanner]
+    expected_code_lang: go
+    question: Show me a Go read-write transaction in Spanner that updates a row based on a read.
+    expected_urls:
+      - https://docs.cloud.google.com/spanner/docs/transactions
+      - https://docs.cloud.google.com/spanner/docs/dml-partitioned
+    must_mention: [ReadWriteTransaction, spanner.Update, Mutation, ReadRow, aborted]
+
+  - id: lib-009
+    class: library
+    products: [vertex-ai]
+    expected_code_lang: python
+    question: How do I call Gemini on Vertex AI from Python and stream the response?
+    expected_urls:
+      - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/inference
+      - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal
+    must_mention: [GenerativeModel, generate_content, stream=True, vertexai.init, location]
+    notes: >
+      Fast-moving surface. Flag this question for re-verification each release cycle; if the
+      golden set rots anywhere first, it will be here.
+
+  - id: lib-010
+    class: library
+    products: [storage]
+    expected_code_lang: nodejs
+    question: Node.js code to download a Cloud Storage object as a stream?
+    expected_urls:
+      - https://docs.cloud.google.com/storage/docs/downloading-objects
+    must_mention: [createReadStream, bucket.file, pipe, "@google-cloud/storage"]
+
+  - id: lib-011
+    class: library
+    products: [iam, auth]
+    expected_code_lang: go
+    question: How does Application Default Credentials work and how do I use it from a Go client library?
+    expected_urls:
+      - https://docs.cloud.google.com/docs/authentication/application-default-credentials
+      - https://docs.cloud.google.com/docs/authentication/provide-credentials-adc
+    must_mention: [GOOGLE_APPLICATION_CREDENTIALS, metadata server, gcloud auth application-default login, search order]
+    notes: >
+      Cross-cutting — the page lives under /docs/authentication, not under a product. Tests
+      whether product-filter inference degrades gracefully when no product is named.
+
+  - id: lib-012
+    class: library
+    products: [pubsub]
+    expected_code_lang: python
+    question: How do I limit how many Pub/Sub messages my Python subscriber processes concurrently?
+    expected_urls:
+      - https://docs.cloud.google.com/pubsub/docs/pull
+      - https://docs.cloud.google.com/pubsub/docs/flow-control-messages
+    must_mention: [FlowControl, max_messages, ThreadScheduler, subscribe, executor]
+    notes: >
+      Deliberately the same topic as lib-005 in a different language. If both return the Java
+      snippet, the code_lang filter (T-4.1 AC2) is not working.
