@@ -10,9 +10,11 @@ wheels/
 .venv
 
 data/
-docs/
+# docs/ is project documentation, not scraped data (rag.py used ./docs as a corpus dir)
+_corpus/
 storage/
 output/
 
 manifest.json
 chroma_langchain_db/
+.DS_Store
